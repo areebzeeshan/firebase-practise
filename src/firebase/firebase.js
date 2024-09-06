@@ -8,7 +8,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { collection, getDocs, getFirestore } from "firebase/firestore";
+import { collection, doc, getDocs, getFirestore, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 const firebaseConfig = {
@@ -29,11 +29,20 @@ const db = getFirestore();
 
 // const [dummy, setDummy] = useState([]);
 
-const signupUser = (email, password) => {
+const signupUser = (email, password, username) => {
   createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredentials) => {
+    .then(async (userCredentials) => {
       const user = userCredentials.user;
       console.log("User : ", user);
+
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          username: username
+        })
+        console.log(`username: ${username} added successfully`)
+      } catch (error) {
+        console.log("Error adding username to the users: ", error)
+      }
     })
     .catch((error) => {
       console.log("Error Code: ", error.code);

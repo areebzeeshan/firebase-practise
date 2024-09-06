@@ -2,7 +2,7 @@ import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { auth, db, onUserStateChange } from "../../firebase/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
 const Home = () => {
@@ -10,30 +10,40 @@ const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unSubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setIsLoggedIn(true); 
-        try {
-          const snapshot = await getDocs(collection(db, "dummy"));
-          setDocs(snapshot.docs);
-        } catch (error) {
-          console.error("Error fetching documents:", error);
-        }
+        setIsLoggedIn(true);
+
+        const unSubscribeSnapshot = onSnapshot(
+          collection(db, "dummy"),
+          (snapshot) => {
+            const updatedDocs = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              data: doc.data(),
+            }));
+            setDocs(updatedDocs); 
+          },
+          (error) => {
+            console.error("Error fetching documents:", error);
+          }
+        );
+
+        return () => unSubscribeSnapshot(); 
       } else {
-        setIsLoggedIn(false); 
-        setDocs([]);
+        setIsLoggedIn(false);
+        setDocs([]); 
       }
     });
 
-    return () => unsubscribe();
+    return () => unSubscribeAuth(); 
   }, []);
 
   return (
     <>
-     {isLoggedIn ? (
-        docs.length > 0 ? (
+      {isLoggedIn ? (
+        docs ? (
           docs.map((doc) => {
-            const content = doc.data();
+            const content = doc.data;
             return (
               <Accordion key={doc.id}>
                 <AccordionSummary
